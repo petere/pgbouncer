@@ -7,8 +7,8 @@ env:
 task:
   name: Linux (Debian/Ubuntu)
   matrix:
-    # - container:
-    #     image: ubuntu:20.04
+    - container:
+        image: ubuntu:20.04
     - container:
         image: ubuntu:22.04
       env:
@@ -17,46 +17,46 @@ task:
         image: ubuntu:22.04
       env:
         configure_args: '--without-openssl'
-    # - container:
-    #     image: ubuntu:20.04
-    #   env:
-    #     configure_args: '--disable-evdns'
-    # - container:
-    #     image: ubuntu:20.04
-    #   env:
-    #     CC: clang
-    # - container:
-    #     image: ubuntu:20.04
-    #   env:
-    #     CFLAGS: -fno-sanitize-recover=all -fsanitize=undefined -fsanitize-address-use-after-scope -fno-sanitize=shift
+    - container:
+        image: ubuntu:20.04
+      env:
+        configure_args: '--disable-evdns'
+    - container:
+        image: ubuntu:20.04
+      env:
+        CC: clang
+    - container:
+        image: ubuntu:20.04
+      env:
+        CFLAGS: -fno-sanitize-recover=all -fsanitize=undefined -fsanitize-address-use-after-scope -fno-sanitize=shift
     - container:
         image: ubuntu:22.04
       env:
         ENABLE_VALGRIND: yes
         CFLAGS: -O0 -g
         PGVERSION: 17
-    # - container:
-    #     image: ubuntu:20.04
-    #   env:
-    #     ENABLE_VALGRIND: yes
-    #     CFLAGS: -O0 -g
-    #     PGVERSION: 9.6
-    # - container:
-    #     image: ubuntu:20.04
-    #   env:
-    #     use_scan_build: yes
-    # - arm_container:
-    #     image: ubuntu:20.04
-    # - container:
-    #     image: ubuntu:22.04
-    # - container:
-    #     image: debian:stable
-    #   env:
-    #     PGVERSION: 13
-    # - container:
-    #     image: debian:oldstable
-    #   env:
-    #     PGVERSION: 11
+    - container:
+        image: ubuntu:20.04
+      env:
+        ENABLE_VALGRIND: yes
+        CFLAGS: -O0 -g
+        PGVERSION: 9.6
+    - container:
+        image: ubuntu:20.04
+      env:
+        use_scan_build: yes
+    - arm_container:
+        image: ubuntu:20.04
+    - container:
+        image: ubuntu:22.04
+    - container:
+        image: debian:stable
+      env:
+        PGVERSION: 13
+    - container:
+        image: debian:oldstable
+      env:
+        PGVERSION: 11
   setup_script:
     - apt-get update
     - apt-get -y install curl gnupg lsb-release
@@ -231,8 +231,8 @@ task:
   matrix:
     - env:
         MSYSTEM: MINGW64
-    # - env:
-    #     MSYSTEM: MINGW32
+    - env:
+        MSYSTEM: MINGW32
   setup_script:
     - choco install -y --no-progress msys2
     - sh -l -c "pacman --noconfirm -S --needed base-devel ${MINGW_PACKAGE_PREFIX}-gcc ${MINGW_PACKAGE_PREFIX}-libevent ${MINGW_PACKAGE_PREFIX}-openssl ${MINGW_PACKAGE_PREFIX}-postgresql autoconf automake libtool ${MINGW_PACKAGE_PREFIX}-python ${MINGW_PACKAGE_PREFIX}-python-pip zip"
