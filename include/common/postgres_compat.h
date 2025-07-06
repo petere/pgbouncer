@@ -17,7 +17,7 @@
 #define lengthof(array) (sizeof (array) / sizeof ((array)[0]))
 #define pg_hton32(x) htobe32(x)
 
-#define pg_attribute_noreturn() _NORETURN
+#define pg_noreturn _NORETURN
 
 #define HIGHBIT					(0x80)
 #define IS_HIGHBIT_SET(ch)		((unsigned char)(ch) & HIGHBIT)
