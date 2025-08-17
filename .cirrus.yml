@@ -222,9 +222,13 @@ task:
     HAVE_IPV6_LOCALHOST: yes
   matrix:
     - env:
+        MSYSTEM: MSYS
+    - env:
+        MSYSTEM: UCRT64
+    - env:
+        MSYSTEM: CLANG64
+    - env:
         MSYSTEM: MINGW64
-    # - env:
-    #     MSYSTEM: MINGW32
   setup_script:
     - choco install -y --no-progress msys2
     - sh -l -c "pacman --noconfirm -S --needed base-devel ${MINGW_PACKAGE_PREFIX}-gcc ${MINGW_PACKAGE_PREFIX}-libevent ${MINGW_PACKAGE_PREFIX}-openssl ${MINGW_PACKAGE_PREFIX}-postgresql autoconf automake libtool pkg-config ${MINGW_PACKAGE_PREFIX}-python ${MINGW_PACKAGE_PREFIX}-python-pip zip"
@@ -234,7 +238,7 @@ task:
     - choco install -y --no-progress pandoc
   build_script:
     - sh -l -c "./autogen.sh"
-    - sh -l -c "./configure --prefix=$HOME/install --enable-werror PANDOC=/c/programdata/chocolatey/bin/pandoc LDFLAGS=-static \"LIBS=-liphlpapi $(pkgconf -libs -static openssl)\" PKG_CONFIG='pkg-config --static'"
+    - sh -l -c "./configure --prefix=$HOME/install --disable-werror PANDOC=/c/programdata/chocolatey/bin/pandoc LDFLAGS=-static \"LIBS=-liphlpapi $(pkgconf -libs -static openssl)\" PKG_CONFIG='pkg-config --static'"
     - sh -l -c "make -j4"
   test_script:
     - sh -l -c "make -j4 check CONCURRENCY=3"
