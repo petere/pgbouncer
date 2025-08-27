@@ -16,11 +16,7 @@ task:
     - container:
         image: ubuntu:22.04
       env:
-        configure_args: '--without-openssl'
-    - container:
-        image: ubuntu:22.04
-      env:
-        configure_args: '--disable-evdns'
+        configure_args: '--disable-evdns --without-openssl'
       trigger_type: manual
     - container:
         image: ubuntu:22.04
@@ -93,7 +89,6 @@ task:
 
 task:
   name: Linux (Red Hat)
-  trigger_type: manual
   matrix:
     - container:
         image: rockylinux:9
@@ -101,6 +96,7 @@ task:
         configure_args: '--with-cares'
     - container:
         image: rockylinux:8
+      trigger_type: manual
   setup_script:
     - dnf -y install 'dnf-command(config-manager)'
     - if grep -q -F 'release 9' /etc/redhat-release; then dnf config-manager --set-enabled "plus"; else dnf config-manager --set-enabled "powertools"; fi
