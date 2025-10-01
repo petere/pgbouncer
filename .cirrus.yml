@@ -1,7 +1,7 @@
 env:
   DEBIAN_FRONTEND: noninteractive
   LANG: C
-  PGVERSION: 16
+  PGVERSION: 17
 
 task:
   name: Linux (Debian/Ubuntu)
@@ -17,6 +17,7 @@ task:
         image: ubuntu:22.04
       env:
         configure_args: '--disable-evdns --without-openssl'
+        PGVERSION: 16
     - container:
         image: ubuntu:22.04
       env:
@@ -27,7 +28,7 @@ task:
       env:
         ENABLE_VALGRIND: yes
         CFLAGS: -O0 -g
-        PGVERSION: 17
+        PGVERSION: 18
     - container:
         image: ubuntu:22.04
       env:
