@@ -9,7 +9,7 @@ from .utils import (
     MACOS,
     PG_MAJOR_VERSION,
     PG_SUPPORTS_SCRAM,
-    TEST_DIR,
+    TEST_SRC_DIR,
     TLS_SUPPORT,
     WINDOWS,
     Bouncer,
@@ -28,7 +28,7 @@ if not TLS_SUPPORT:
 @pytest.fixture
 async def bouncer_tls(pg, tmp_path):
     bouncer_tls = Bouncer(
-        pg, tmp_path / "bouncer", base_ini_path=TEST_DIR / "ssl" / "test.ini"
+        pg, tmp_path / "bouncer", base_ini_path=TEST_SRC_DIR / "ssl" / "test.ini"
     )
 
     await bouncer_tls.start()

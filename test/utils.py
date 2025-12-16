@@ -25,24 +25,21 @@ import psycopg
 import psycopg.sql
 from psycopg import sql
 
-TEST_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
-os.chdir(TEST_DIR)
+TEST_SRC_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
+TEST_BUILD_DIR = Path(os.getcwd()) / "test"
+os.chdir(TEST_BUILD_DIR)
 
-PGDATA = TEST_DIR / "pgdata"
+PGDATA = TEST_BUILD_DIR / "pgdata"
 PGHOST = "127.0.0.1"
 
-BOUNCER_LOG = TEST_DIR / "test.log"
-BOUNCER_INI = TEST_DIR / "test.ini"
-BOUNCER_AUTH = TEST_DIR / "userlist.txt"
-BOUNCER_PID = TEST_DIR / "test.pid"
+BOUNCER_INI = TEST_SRC_DIR / "test.ini"
+BOUNCER_AUTH = TEST_SRC_DIR / "userlist.txt"
 BOUNCER_PORT = 6667
-BOUNCER_EXE = TEST_DIR / "../pgbouncer"
-NEW_CA_SCRIPT = TEST_DIR / "ssl" / "newca.sh"
-NEW_SITE_SCRIPT = TEST_DIR / "ssl" / "newsite.sh"
+BOUNCER_EXE = TEST_BUILD_DIR / "../pgbouncer"
 ENABLE_VALGRIND = bool(os.environ.get("ENABLE_VALGRIND"))
 HAVE_IPV6_LOCALHOST = bool(os.environ.get("HAVE_IPV6_LOCALHOST"))
 USE_SUDO = bool(os.environ.get("USE_SUDO"))
-START_OPENLDAP_SCRIPT = TEST_DIR / "start_openldap_server.sh"
+START_OPENLDAP_SCRIPT = TEST_SRC_DIR / "start_openldap_server.sh"
 
 # The tests require that psql can connect to the PgBouncer admin
 # console.  On platforms that have getpeereid(), this works by
@@ -161,7 +158,7 @@ PG_MAJOR_VERSION = get_pg_major_version()
 
 
 def get_max_password_length():
-    with open("../include/bouncer.h", encoding="utf-8") as f:
+    with open(TEST_SRC_DIR / "../include/bouncer.h", encoding="utf-8") as f:
         match = re.search(r"#define MAX_PASSWORD\s+([0-9].*)", f.read())
         assert match is not None
         max_password_length = int(match.group(1))
@@ -182,25 +179,9 @@ PG_SUPPORTS_SCRAM = PG_MAJOR_VERSION >= 10
 # our own check here that works on all our supported systems
 LIBPQ_SUPPORTS_PIPELINING = psycopg.pq.version() >= 140000
 
+LDAP_SUPPORT = os.environ["ldap_support"] == "yes"
 
-def get_ldap_support():
-    with open("../config.mak", encoding="utf-8") as f:
-        match = re.search(r"ldap_support = (\w+)", f.read())
-        assert match is not None
-        return match.group(1) == "yes"
-
-
-LDAP_SUPPORT = get_ldap_support()
-
-
-def get_tls_support():
-    with open("../config.mak", encoding="utf-8") as f:
-        match = re.search(r"tls_support = (\w+)", f.read())
-        assert match is not None
-        return match.group(1) == "yes"
-
-
-TLS_SUPPORT = get_tls_support()
+TLS_SUPPORT = os.environ["tls_support"] == "yes"
 DIRECT_TLS_SUPPORT = TLS_SUPPORT and PG_MAJOR_VERSION >= 17
 
 

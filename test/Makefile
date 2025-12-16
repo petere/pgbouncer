@@ -27,7 +27,9 @@ AM_FEATURES = libusual
 
 
 include ../config.mak
-include ../lib/mk/antimake.mk
+SUBLOC = test
+abs_top_srcdir ?= $(CURDIR)/..
+include $(abs_top_srcdir)/lib/mk/antimake.mk
 
 check: all
-	./hba_test
+	cd $(srcdir) && $(CURDIR)/hba_test

@@ -170,12 +170,15 @@ PYTEST = $(shell command -v pytest || echo '$(PYTHON) -m pytest')
 CONCURRENCY = auto
 PYTEST_FLAGS = -r s
 
+export ldap_support
+export tls_support
+
 check: all
-	etc/optscan.sh
+	cd $(srcdir) && ./etc/optscan.sh
 	if [ $(CONCURRENCY) = 1 ]; then \
-		PYTHONIOENCODING=utf8 $(PYTEST) $(PYTEST_FLAGS); \
+		PYTHONIOENCODING=utf8 $(PYTEST) $(PYTEST_FLAGS) $(srcdir); \
 	else \
-		PYTHONIOENCODING=utf8 $(PYTEST) -n $(CONCURRENCY) $(PYTEST_FLAGS); \
+		PYTHONIOENCODING=utf8 $(PYTEST) -n $(CONCURRENCY) $(PYTEST_FLAGS) $(srcdir); \
 	fi
 	$(MAKE) -C test check
 

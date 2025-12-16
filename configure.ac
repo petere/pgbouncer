@@ -196,10 +196,12 @@ AC_CONFIG_FILES([config.mak])
 AC_OUTPUT
 
 dnl If separate build dir, link Makefile over
-test -f Makefile || {
-  echo "Linking Makefile"
-  ln -s $srcdir/Makefile
-}
+if test "$srcdir" != "."; then
+  pgac_abs_top_srcdir=`cd "$srcdir" && pwd`
+  mkdir -p doc test
+  ln -s $pgac_abs_top_srcdir/doc/Makefile doc/Makefile
+  ln -s $pgac_abs_top_srcdir/test/Makefile test/Makefile
+fi
 
 echo ""
 echo "Results:"

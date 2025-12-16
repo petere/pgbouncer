@@ -9,7 +9,7 @@ from .utils import (
     LINUX,
     LONG_PASSWORD,
     PG_SUPPORTS_SCRAM,
-    TEST_DIR,
+    TEST_SRC_DIR,
     TLS_SUPPORT,
     USE_SUDO,
     Bouncer,
@@ -47,15 +47,15 @@ def delete_qdisc():
 def create_certs(cert_dir):
     run(
         "sh create_certs.sh",
-        cwd=TEST_DIR / "ssl",
+        cwd=TEST_SRC_DIR / "ssl",
         silent=True,
     )
     if not TLS_SUPPORT:
         return
 
     cert_dir.mkdir()
-    shutil.move(TEST_DIR / "ssl" / "TestCA1", cert_dir / "TestCA1")
-    shutil.move(TEST_DIR / "ssl" / "TestCA2", cert_dir / "TestCA2")
+    shutil.move(TEST_SRC_DIR / "ssl" / "TestCA1", cert_dir / "TestCA1")
+    shutil.move(TEST_SRC_DIR / "ssl" / "TestCA2", cert_dir / "TestCA2")
 
 
 @pytest.fixture(autouse=True, scope="session", name="cert_dir")
