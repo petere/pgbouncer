@@ -66,16 +66,17 @@ task:
     - echo 'user ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
   build_script:
     - su user -c "./autogen.sh"
-    - su user -c "${use_scan_build:+scan-build} ./configure --prefix=$HOME/install --enable-cassert --enable-werror --without-cares --with-systemd $configure_args"
-    - su user -c "${use_scan_build:+scan-build} make -j4"
+    - su user -c "mkdir -p build"
+    - su user -c "cd build && ${use_scan_build:+scan-build} ../configure --prefix=$HOME/install --enable-cassert --enable-werror --without-cares --with-systemd $configure_args"
+    - su user -c "cd build && ${use_scan_build:+scan-build} make -j4"
   test_script:
-    - source /venv/bin/activate && su user -c "PATH=/usr/lib/postgresql/${PGVERSION}/bin:$PATH make -j4 check CONCURRENCY=4"
+    - source /venv/bin/activate && su user -c "cd build && PATH=/usr/lib/postgresql/${PGVERSION}/bin:$PATH make -j4 check CONCURRENCY=1"
   install_script:
-    - make -j4 install
+    - cd build && make -j4 install
   dist_script:
-    - su user -c "make dist"
-    - PACKAGE_VERSION=$(sed -n 's/PACKAGE_VERSION = //p' config.mak)
-    - su user -c "tar -x -v -f pgbouncer-${PACKAGE_VERSION}.tar.gz"
+    - su user -c "cd build && make dist"
+    - PACKAGE_VERSION=$(sed -n 's/PACKAGE_VERSION = //p' build/config.mak)
+    - su user -c "tar -x -v -f build/pgbouncer-${PACKAGE_VERSION}.tar.gz"
     - su user -c "cd pgbouncer-${PACKAGE_VERSION}/ && ./configure --prefix=$HOME/install2 --enable-werror --without-cares $configure_args && make -j4"
     - cd pgbouncer-${PACKAGE_VERSION}/ && make -j4 install
   tarball_artifacts:
