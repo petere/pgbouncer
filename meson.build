@@ -493,6 +493,13 @@ warning_flags = [
 ]
 add_project_arguments(cc.get_supported_arguments(warning_flags), language: 'c')
 
+# Only true flexible array members ([]) are variable length; trailing [0]/[1]/[N]
+# arrays get their declared size, which keeps __builtin_object_size,
+# -Warray-bounds and UBSan bounds checking accurate for them.  Compilers that do
+# not know the option (before GCC 13 / Clang 16) just drop it.
+add_project_arguments(cc.get_supported_arguments(['-fstrict-flex-arrays=3']),
+                      language: 'c')
+
 # ----------------------------------------------------------------------
 # Sources
 #
