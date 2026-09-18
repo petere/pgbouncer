@@ -47,7 +47,7 @@ static inline void bitmap256_init(struct Bitmap256 *bmap)
  */
 static inline void bitmap256_set(struct Bitmap256 *bmap, uint8_t byte)
 {
-	bmap->bmap[byte >> BITMAP256_SHIFT] |= 1 << (byte & BITMAP256_MASK);
+	bmap->bmap[byte >> BITMAP256_SHIFT] |= 1U << (byte & BITMAP256_MASK);
 }
 
 /**
@@ -55,7 +55,7 @@ static inline void bitmap256_set(struct Bitmap256 *bmap, uint8_t byte)
  */
 static inline bool bitmap256_is_set(const struct Bitmap256 *bmap, uint8_t byte)
 {
-	return bmap->bmap[byte >> BITMAP256_SHIFT] & (1 << (byte & BITMAP256_MASK));
+	return bmap->bmap[byte >> BITMAP256_SHIFT] & (1U << (byte & BITMAP256_MASK));
 }
 
 /*
@@ -79,7 +79,7 @@ static inline bool bitmap256_is_set(const struct Bitmap256 *bmap, uint8_t byte)
 #define _BMAP256_V8(ck, p) \
 	_BMAP256_BIT(ck, (p) + 0) | _BMAP256_BIT(ck, (p) + 1) | _BMAP256_BIT(ck, (p) + 2) | _BMAP256_BIT(ck, (p) + 3) | \
 	_BMAP256_BIT(ck, (p) + 4) | _BMAP256_BIT(ck, (p) + 5) | _BMAP256_BIT(ck, (p) + 6) | _BMAP256_BIT(ck, (p) + 7)
-#define _BMAP256_BIT(ck, p) (ck(p) ? (1 << ((p)&BMAP256_MASK)) : 0)
+#define _BMAP256_BIT(ck, p) (ck(p) ? (1U << ((p)&BMAP256_MASK)) : 0)
 
 /**
  * Use C preprocessor to generate array of 256 values.

@@ -140,12 +140,12 @@ struct Op {
 
 static bool class_isset(const struct ClassData *cd, unsigned char c)
 {
-	return cd->bitmap[c / 32] & (1 << (c % 32));
+	return cd->bitmap[c / 32] & (1U << (c % 32));
 }
 
 static void class_set(struct ClassData *cd, unsigned char c)
 {
-	cd->bitmap[c / 32] |= (1 << (c % 32));
+	cd->bitmap[c / 32] |= (1U << (c % 32));
 }
 
 static void class_negate(struct ClassData *cd)

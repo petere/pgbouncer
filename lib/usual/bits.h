@@ -44,17 +44,17 @@ static inline bool is_power_of_2(unsigned int n)
 /** Rotate 16-bit int to left */
 static inline uint16_t rol16(uint16_t v, int s)
 {
-	return (v << s) | (v >> (16 - s));
+	return (uint16_t)((v << (s & 15)) | (v >> ((16 - s) & 15)));
 }
 /** Rotate 32-bit int to left */
 static inline uint32_t rol32(uint32_t v, int s)
 {
-	return (v << s) | (v >> (32 - s));
+	return (v << (s & 31)) | (v >> ((32 - s) & 31));
 }
 /** Rotate 64-bit int to left */
 static inline uint64_t rol64(uint64_t v, int s)
 {
-	return (v << s) | (v >> (64 - s));
+	return (v << (s & 63)) | (v >> ((64 - s) & 63));
 }
 
 /** Rotate 16-bit int to right */

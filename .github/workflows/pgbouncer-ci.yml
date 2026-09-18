@@ -170,7 +170,7 @@ jobs:
         include:
           - name: plain
           - name: ubsan
-            cflags: "-fno-sanitize-recover=all -fsanitize=undefined -fsanitize-address-use-after-scope -fno-sanitize=shift"
+            cflags: "-fno-sanitize-recover=all -fsanitize=undefined -fsanitize-address-use-after-scope"
           - name: scan-build
             scan_build: "yes"
           - name: arm
