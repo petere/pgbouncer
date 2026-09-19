@@ -35,6 +35,7 @@ def test_login_notify_message_negative(bouncer):
     [pgbouncer]
     listen_addr = {bouncer.host}
     admin_users = pgbouncer
+    auth_type = scram-sha-256
     auth_file = {bouncer.auth_path}
     listen_port = {bouncer.port}
     logfile = {bouncer.log_path}
@@ -64,6 +65,7 @@ def test_login_notify_message(bouncer):
     [pgbouncer]
     listen_addr = {bouncer.host}
     admin_users = pgbouncer
+    auth_type = scram-sha-256
     auth_file = {bouncer.auth_path}
     listen_port = {bouncer.port}
     logfile = {bouncer.log_path}

@@ -257,6 +257,33 @@ def get_md5_support():
 MD5_SUPPORT = get_md5_support()
 
 
+def get_tls13_ciphers():
+    """List the TLS 1.3 cipher suites that OpenSSL offers.
+
+    In FIPS mode the ChaCha20-Poly1305 suite is missing, since it is not a
+    FIPS-approved algorithm.  If the openssl command line tool is not
+    installed, assume that all the standard suites are available.
+    """
+    default = [
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_CHACHA20_POLY1305_SHA256",
+        "TLS_AES_128_GCM_SHA256",
+    ]
+    try:
+        result = subprocess.run(
+            ["openssl", "ciphers", "-s", "-tls1_3"],
+            check=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return default
+    return result.stdout.strip().split(":")
+
+
+TLS13_CIPHERS = get_tls13_ciphers()
+
+
 # this is out of ephemeral port range for many systems hence
 # it is a lower change that it will conflict with "in-use" ports
 PORT_LOWER_BOUND = 10200

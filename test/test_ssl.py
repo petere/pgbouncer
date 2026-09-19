@@ -10,6 +10,7 @@ from .utils import (
     PG_MAJOR_VERSION,
     PG_SUPPORTS_SCRAM,
     TEST_DIR,
+    TLS13_CIPHERS,
     TLS_SUPPORT,
     WINDOWS,
     Bouncer,
@@ -461,11 +462,17 @@ def test_client_ssl_set_ciphers_for_tls_v1_3(bouncer_tls, cert_dir):
     bouncer_tls.write_ini(f"client_tls_sslmode = require")
 
     bouncer_tls.write_ini("client_tls_protocols=tlsv1.3")
-    bouncer_tls.write_ini("client_tls13_ciphers=TLS_CHACHA20_POLY1305_SHA256")
+    # ChaCha20-Poly1305 is not FIPS-approved, so OpenSSL does not offer it in
+    # FIPS mode.  Any other suite does just as well for this test.
+    if "TLS_CHACHA20_POLY1305_SHA256" in TLS13_CIPHERS:
+        cipher = "TLS_CHACHA20_POLY1305_SHA256"
+    else:
+        cipher = "TLS_AES_128_GCM_SHA256"
+    bouncer_tls.write_ini(f"client_tls13_ciphers={cipher}")
 
     bouncer_tls.admin("reload")
 
-    with bouncer_tls.log_contains(r"tls=TLSv1.3/TLS_CHACHA20_POLY1305_SHA256"):
+    with bouncer_tls.log_contains(rf"tls=TLSv1.3/{cipher}"):
         bouncer_tls.psql_test(host="localhost", sslmode="require")
 
     bouncer_tls.admin("set client_tls13_ciphers='TLS_AES_256_GCM_SHA384'")
