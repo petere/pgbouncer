@@ -193,10 +193,10 @@ jobs:
   # bookworm is built with meson; trixie exercises the autoconf build instead.
   linux-debian:
     name: Linux Debian (${{ matrix.name }}, ${{ matrix.build_system }})
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.ref == 'refs/heads/master' ||
-      contains(github.event.pull_request.labels.*.name, 'ci-full')
+#    if: >-
+#      github.event_name == 'workflow_dispatch' ||
+#      github.ref == 'refs/heads/master' ||
+#      contains(github.event.pull_request.labels.*.name, 'ci-full')
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
@@ -208,11 +208,13 @@ jobs:
           # them (so that we test what users are likely to use).
           - { name: bookworm, image: debian:bookworm, pgversion: "15", build_system: meson }
           - { name: trixie, image: debian:trixie, pgversion: "17", build_system: autoconf }
+          - { name: trixie-fips, image: debian:trixie, pgversion: "17", build_system: autoconf, fips: "yes" }
     env:
       PGVERSION: ${{ matrix.pgversion }}
       BUILD_SYSTEM: ${{ matrix.build_system }}
       MESON_ARGS: -Dcassert=true -Dsystemd=enabled -Dcares=disabled
       CONFIGURE_ARGS: --enable-cassert --with-systemd --without-cares
+      USE_FIPS: ${{ matrix.fips }}
     steps:
       - uses: actions/checkout@v7
       - name: Install dependencies
@@ -222,7 +224,8 @@ jobs:
           apt-get -y --no-install-recommends install gnupg postgresql-common
           /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           apt-get update
-          apt-get -y --no-install-recommends install autoconf automake ca-certificates cpio git iptables ldap-utils libc-ares-dev libevent-dev libldap-dev libpam0g-dev libssl-dev libsystemd-dev libtool make meson ninja-build pandoc pkg-config "postgresql-$PGVERSION" python3 python3-pip python3-venv slapd socat sudo
+          apt-get -y --no-install-recommends install autoconf automake ca-certificates cpio git iptables ldap-utils libc-ares-dev libevent-dev libldap-dev libpam0g-dev libssl-dev libsystemd-dev libtool make meson ninja-build pandoc pkg-config postgresql-$PGVERSION python3 python3-pip python3-venv slapd socat sudo
+          if [ "$USE_FIPS" = "yes" ]; then apt-get -y --no-install-recommends install openssl-provider-fips; fi
           python3 -m venv /venv
           /venv/bin/pip install .
           # -m creates the home directory; the install step writes to $HOME, and
@@ -230,6 +233,15 @@ jobs:
           useradd -m user
           chown -R user .
           echo 'user ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+      # Generate the FIPS module config (the integrity check the provider does
+      # at load time) and edit the system openssl.cnf to include it and activate
+      # the fips and base providers, so everything in the job runs in FIPS mode.
+      - name: Enable FIPS mode
+        if: ${{ env.USE_FIPS == 'yes' }}
+        run: |
+          set -e
+          openssl fipsinstall -out /etc/ssl/fipsmodule.cnf -module "$(openssl version -m | sed 's/^MODULESDIR: "//;s/"$//')/fips.so"
+          sed -i 's!^.*\.include.*fipsmodule.*$!.include /etc/ssl/fipsmodule.cnf!;s!^.*fips.*fips_sect.*$!fips = fips_sect\nbase = base_sect\n\n[base_sect]\nactivate = 1!' /etc/ssl/openssl.cnf
       - name: Build
         run: su user -c "MESON_ARGS='$MESON_ARGS' CONFIGURE_ARGS='$CONFIGURE_ARGS' PATH=/venv/bin:\$PATH sh ci/run.sh build $BUILD_SYSTEM"
       - name: Test
