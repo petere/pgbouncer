@@ -8,6 +8,7 @@ from .utils import (
     LDAP_SUPPORT,
     LINUX,
     LONG_PASSWORD,
+    MD5_SUPPORT,
     PG_SUPPORTS_SCRAM,
     TEST_DIR,
     TLS_SUPPORT,
@@ -19,6 +20,22 @@ from .utils import (
     run,
     sudo,
 )
+
+
+def pytest_collection_modifyitems(items):
+    """Skip tests that need MD5 when MD5 is not available.
+
+    MD5 hashing fails when OpenSSL runs in FIPS mode, and that is on
+    purpose: PgBouncer uses OpenSSL for it precisely so that MD5
+    authentication is refused on a FIPS host.  So skip the tests that
+    exercise MD5 rather than expecting them to pass.
+    """
+    if MD5_SUPPORT:
+        return
+    skip_md5 = pytest.mark.skip(reason="MD5 is not available (OpenSSL in FIPS mode?)")
+    for item in items:
+        if "md5" in item.keywords:
+            item.add_marker(skip_md5)
 
 
 def add_qdisc():
@@ -155,11 +172,27 @@ def pg(tmp_path_factory, cert_dir):
     pg.sql("create table test_copy(i int)", dbname="p0")
     pg.sql("grant all on table test_copy to public", dbname="p0")
 
+    # The muser* users have MD5 passwords on the server.  Without MD5 they
+    # are created with the default password encryption instead, so that they
+    # still exist for the tests that only use them as an ordinary user; the
+    # tests that actually authenticate them with MD5 are skipped.
+    if MD5_SUPPORT:
+        md5 = "md5" if PG_SUPPORTS_SCRAM else "on"
+        pg.sql(f"set password_encryption = '{md5}'; create user muser1 password 'foo';")
+        pg.sql(
+            f"set password_encryption = '{md5}'; create user muser2 password 'wrong';"
+        )
+    else:
+        pg.sql("create user muser1 password 'foo';")
+        pg.sql("create user muser2 password 'wrong';")
+
+    # The puser* users are used for plain-text password authentication.  How
+    # the server stores their passwords does not matter for that, so just use
+    # the default password encryption.
+    pg.sql("create user puser1 password 'foo';")
+    pg.sql("create user puser2 password 'wrong';")
+
     if PG_SUPPORTS_SCRAM:
-        pg.sql("set password_encryption = 'md5'; create user muser1 password 'foo';")
-        pg.sql("set password_encryption = 'md5'; create user muser2 password 'wrong';")
-        pg.sql("set password_encryption = 'md5'; create user puser1 password 'foo';")
-        pg.sql("set password_encryption = 'md5'; create user puser2 password 'wrong';")
         pg.sql(
             "set password_encryption = 'scram-sha-256'; create user scramuser1 password '"
             "SCRAM-SHA-256$4096:D76gvGUVj9Z4DNiGoabOBg==$RukL0Xo3Ql/2F9FsD7mcQ3GATG2fD3PA71qY1JagGDs=:BhKUwyyivFm7Tq2jDJVXSVRbRDgTWyBilZKgg6DDuYU="
@@ -168,11 +201,6 @@ def pg(tmp_path_factory, cert_dir):
         pg.sql(
             "set password_encryption = 'scram-sha-256'; create user scramuser3 password 'baz';"
         )
-    else:
-        pg.sql("set password_encryption = 'on'; create user muser1 password 'foo';")
-        pg.sql("set password_encryption = 'on'; create user muser2 password 'wrong';")
-        pg.sql("set password_encryption = 'on'; create user puser1 password 'foo';")
-        pg.sql("set password_encryption = 'on'; create user puser2 password 'wrong';")
 
     yield pg
 

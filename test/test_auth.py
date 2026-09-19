@@ -66,10 +66,10 @@ def test_message(test_message_fixture):
         bouncer.test(**connection_params)
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_auth_user(pg, bouncer):
     bouncer.default_db = "authdb"
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     bouncer.test(user="someuser", password="anypasswd")
 
     with pytest.raises(psycopg.OperationalError, match="no such user"):
@@ -83,7 +83,7 @@ def test_auth_user(pg, bouncer):
     pg.sql("ALTER USER someuser VALID UNTIL '1999-01-01'")
 
     with pytest.raises(
-        psycopg.OperationalError, match="password authentication failed"
+        psycopg.OperationalError, match="(SASL|password) authentication failed"
     ):
         bouncer.test(user="someuser", password="anypasswd")
 
@@ -91,20 +91,20 @@ def test_auth_user(pg, bouncer):
     bouncer.test(user="someuser", password="anypasswd")
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_auth_dbname_global(bouncer):
     bouncer.admin(f"set auth_dbname='authdb'")
     bouncer.admin(f"set auth_user='pswcheck'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
 
     bouncer.test(dbname="p7a", user="someuser", password="anypasswd")
     bouncer.test(dbname="p7a", user="pswcheck", password="pgbouncer-check")
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_auth_dbname_global_invalid(bouncer):
     bouncer.admin(f"set auth_dbname='p_unconfigured_auth_dbname'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
 
     with (
         bouncer.log_contains(
@@ -119,9 +119,10 @@ def test_auth_dbname_global_invalid(bouncer):
     bouncer.test(dbname="pauthz", user="someuser", password="anypasswd")
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_auth_dbname_disabled(bouncer):
     bouncer.admin("disable authdb")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
 
     with pytest.raises(
         psycopg.OperationalError, match='authentication database "authdb" is disabled'
@@ -129,7 +130,7 @@ def test_auth_dbname_disabled(bouncer):
         bouncer.test(dbname="pauthz", user="someuser", password="anypasswd")
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_auth_dbname_with_auto_database(bouncer):
     with bouncer.ini_path.open() as f:
         original = f.read()
@@ -143,13 +144,13 @@ def test_auth_dbname_with_auto_database(bouncer):
     bouncer.admin("reload")
     bouncer.admin("set verbose=2")
     bouncer.admin("set auth_user='pswcheck'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     # postgres is not defined in test.ini
     bouncer.test(dbname="postgres", user="someuser", password="anypasswd")
     bouncer.test(dbname="postgres", user="pswcheck", password="pgbouncer-check")
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 def test_unconfigured_auth_database_with_auto_database(bouncer):
     """
     Tests the scenario where the authentication database does not
@@ -173,7 +174,7 @@ def test_unconfigured_auth_database_with_auto_database(bouncer):
     bouncer.admin("set auth_dbname=unconfigured_auth_database")
     bouncer.admin("reload")
     bouncer.admin("set auth_user='pswcheck'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
 
     # test a database that does not exist on the server, it should fail.
     # but this error will only surface when we attempt to make the connection to client's
@@ -183,9 +184,11 @@ def test_unconfigured_auth_database_with_auto_database(bouncer):
         psycopg.OperationalError,
         match='database "this_database_doesnt_exist" does not exist',
     ):
-        bouncer.test(dbname="this_database_doesnt_exist", user="muser1", password="foo")
+        bouncer.test(
+            dbname="this_database_doesnt_exist", user="scramuser1", password="foo"
+        )
     # do a final sanity check that we can connect.
-    bouncer.test(user="muser1", password="foo")
+    bouncer.test(user="scramuser1", password="foo")
 
 
 def run_server_auth_test(bouncer, dbname):
@@ -209,8 +212,8 @@ def run_server_auth_test(bouncer, dbname):
 # Test plain-text password authentication from PgBouncer to PostgreSQL server
 #
 # The PostgreSQL server no longer supports storing plain-text
-# passwords, so the server-side user actually uses md5 passwords in
-# this test case, but the communication is still in plain text.
+# passwords, so the server-side user stores a hashed password in this
+# test case, but the communication is still in plain text.
 def test_password_server(bouncer):
     run_server_auth_test(bouncer, "p4")
     # long password from auth_file
@@ -239,7 +242,6 @@ def test_scram_server(bouncer):
         bouncer.test(dbname="p6z")
 
 
-@pytest.mark.md5
 def connect_with_password_client_users(bouncer):
     # good password
     bouncer.test(user="puser1", password="foo")
@@ -271,11 +273,9 @@ def connect_with_scram_client_users(bouncer):
 
 
 # Test plain-text password authentication from client to PgBouncer
-@pytest.mark.md5
 def test_password_client(bouncer):
     bouncer.admin(f"set auth_type='plain'")
     connect_with_password_client_users(bouncer)
-    connect_with_md5_client_users(bouncer)
     connect_with_scram_client_users(bouncer)
 
     # long password
@@ -285,6 +285,14 @@ def test_password_client(bouncer):
         psycopg.OperationalError, match="password authentication failed"
     ):
         bouncer.test(user="longpass", password="X" + LONG_PASSWORD)
+
+
+# Same, but against a user with an MD5 password stored in the auth
+# file, which makes PgBouncer compute an MD5 hash to compare against.
+@pytest.mark.md5
+def test_password_client_md5_user(bouncer):
+    bouncer.admin(f"set auth_type='plain'")
+    connect_with_md5_client_users(bouncer)
 
 
 @pytest.mark.md5
@@ -384,6 +392,7 @@ def test_scram_passthrough_after_reconnect(bouncer):
     bouncer.test(dbname="p62", user="scramuser1", password="foo")
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_dbname_usage(
     bouncer,
@@ -403,7 +412,7 @@ def test_auth_dbname_usage(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pswcheck
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -441,6 +450,7 @@ def test_auth_dbname_usage(
             bouncer.sql(query="show stats", user="stats", password="stats", dbname="p4")
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_dbname_usage_global_setting(
     bouncer,
@@ -459,7 +469,7 @@ def test_auth_dbname_usage_global_setting(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pswcheck
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -476,6 +486,7 @@ def test_auth_dbname_usage_global_setting(
         pass
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_query_database_setting(
     bouncer,
@@ -494,7 +505,7 @@ def test_auth_query_database_setting(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -519,7 +530,7 @@ def test_auth_query_database_setting(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -528,7 +539,7 @@ def test_auth_query_database_setting(
 
     with (
         bouncer.run_with_config(config),
-        pytest.raises(psycopg.OperationalError, match="password authentication failed"),
+        pytest.raises(psycopg.OperationalError, match="SASL authentication failed"),
         bouncer.run_with_config(config),
     ):
         bouncer.sql(
@@ -539,6 +550,7 @@ def test_auth_query_database_setting(
         )
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_query_works_with_configured_users(bouncer):
     """
@@ -555,7 +567,7 @@ def test_auth_query_works_with_configured_users(bouncer):
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -590,7 +602,7 @@ def test_auth_query_works_with_configured_users(bouncer):
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -619,6 +631,7 @@ def test_auth_query_works_with_configured_users(bouncer):
         )
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_query_logs_server_error(
     bouncer,
@@ -638,7 +651,7 @@ def test_auth_query_logs_server_error(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -658,8 +671,8 @@ def test_auth_query_logs_server_error(
         )
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
-@pytest.mark.md5
 def test_auth_dbname_works_fine(
     bouncer,
 ):
@@ -681,7 +694,7 @@ def test_auth_dbname_works_fine(
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -1214,6 +1227,7 @@ def test_auth_user_at_db_level_with_same_forced_user(bouncer):
             cur.execute("select 1")
 
 
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif("WINDOWS", reason="Windows does not have SIGHUP")
 def test_auth_query_no_set_commands(bouncer, pg):
     """
@@ -1245,7 +1259,7 @@ def test_auth_query_no_set_commands(bouncer, pg):
         stats_users = stats
         listen_addr = {bouncer.host}
         admin_users = pgbouncer
-        auth_type = md5
+        auth_type = scram-sha-256
         auth_file = {bouncer.auth_path}
         listen_port = {bouncer.port}
         logfile = {bouncer.log_path}
@@ -1270,7 +1284,7 @@ def test_auth_query_no_set_commands(bouncer, pg):
         pg.sql("DROP FUNCTION IF EXISTS auth_check_search_path(TEXT)")
 
 
-@pytest.mark.md5
+@pytest.mark.skipif("not PG_SUPPORTS_SCRAM")
 @pytest.mark.skipif(
     "psycopg.pq.version() < 180000", reason="libpq 18+ required for protocol 3.2"
 )
@@ -1287,7 +1301,7 @@ def test_auth_query_protocol_negotiation(bouncer, pg):
     calling decide_startup_pool() again and sending a duplicate message.
     """
     bouncer.default_db = "authdb"
-    bouncer.admin("set auth_type='md5'")
+    bouncer.admin("set auth_type='scram-sha-256'")
 
     # First, kill all server connections to ensure a cold pool. This is
     # important because the bug only manifests when auth_query needs to

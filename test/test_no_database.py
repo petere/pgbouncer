@@ -13,20 +13,20 @@ def test_no_database(bouncer):
 
 
 def test_no_database_authfail(bouncer):
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     with (
-        bouncer.log_contains(r"closing because: password authentication failed"),
-        pytest.raises(psycopg.OperationalError, match="password authentication failed"),
+        bouncer.log_contains(r"closing because: SASL authentication failed"),
+        pytest.raises(psycopg.OperationalError, match="SASL authentication failed"),
     ):
         bouncer.test(dbname="nosuchdb", password="wrong")
 
 
 def test_no_database_auth_user(bouncer):
     bouncer.admin(f"set auth_user='pswcheck'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     with (
-        bouncer.log_contains(r"closing because: password authentication failed"),
-        pytest.raises(psycopg.OperationalError, match="password authentication failed"),
+        bouncer.log_contains(r"closing because: SASL authentication failed"),
+        pytest.raises(psycopg.OperationalError, match="SASL authentication failed"),
     ):
         bouncer.test(dbname="nosuchdb", user="someuser", password="wrong")
 
@@ -77,7 +77,7 @@ def test_no_database_auto_database_auth_user(bouncer):
 
     bouncer.admin("reload")
     bouncer.admin(f"set auth_user='pswcheck'")
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
 
     with (
         bouncer.log_contains(

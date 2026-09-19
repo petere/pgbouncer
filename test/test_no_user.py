@@ -43,6 +43,7 @@ def test_no_user_password_forced_user(bouncer):
         bouncer.test(dbname="p1", user="nosuchuser", password="whatever")
 
 
+@pytest.mark.md5
 def test_no_user_md5(bouncer):
     bouncer.admin(f"set auth_type='md5'")
     with (
@@ -52,6 +53,7 @@ def test_no_user_md5(bouncer):
         bouncer.test(dbname="p2", user="nosuchuser", password="whatever")
 
 
+@pytest.mark.md5
 def test_no_user_md5_forced_user(bouncer):
     bouncer.admin(f"set auth_type='md5'")
     with (
@@ -80,7 +82,7 @@ def test_no_user_scram_forced_user(bouncer):
 
 
 def test_no_user_auth_user(bouncer):
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     # Currently no mock authentication when using
     # auth_query/auth_user.  See TODO in
     # handle_auth_query_response().
@@ -98,7 +100,7 @@ def test_no_user_auth_user_null_row(bouncer):
     rows.  The user_lookup() example in the documentation behaves this
     way.
     """
-    bouncer.admin(f"set auth_type='md5'")
+    bouncer.admin(f"set auth_type='scram-sha-256'")
     bouncer.admin(
         "set auth_query='SELECT (SELECT rolname FROM pg_authid WHERE rolname = $1), (SELECT rolpassword FROM pg_authid WHERE rolname = $1)'"
     )

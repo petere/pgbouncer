@@ -236,6 +236,27 @@ TLS_SUPPORT = get_tls_support()
 DIRECT_TLS_SUPPORT = TLS_SUPPORT and PG_MAJOR_VERSION >= 17
 
 
+def get_md5_support():
+    """Detect whether MD5 hashing is available.
+
+    PgBouncer computes MD5 hashes with OpenSSL (see pg_md5_encrypt() in
+    src/util.c), and PostgreSQL does the same for md5 passwords, so MD5
+    authentication does not work when OpenSSL runs in FIPS mode.  Probe the
+    openssl command line tool, which reads the same configuration.  If it is
+    not installed at all, assume that MD5 works.
+    """
+    try:
+        subprocess.run(["openssl", "md5", os.devnull], check=True, capture_output=True)
+    except FileNotFoundError:
+        return True
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
+MD5_SUPPORT = get_md5_support()
+
+
 # this is out of ephemeral port range for many systems hence
 # it is a lower change that it will conflict with "in-use" ports
 PORT_LOWER_BOUND = 10200

@@ -475,6 +475,9 @@ md5
     passwords.  If `md5` is configured and a user has a SCRAM secret,
     then SCRAM authentication is used automatically instead.
 
+    MD5 is not available when OpenSSL is running in FIPS mode.  Use
+    `scram-sha-256` instead.
+
 scram-sha-256
 :   Use password check with SCRAM-SHA-256.  `auth_file` has to contain
     SCRAM secrets or plain-text passwords.
