@@ -1122,14 +1122,48 @@ class Bouncer(QueryRunner):
         return False
 
     async def wait_for_exit(self):
+        exit_status = None
         if self.process is not None:
             self.process.communicate()
-            self.process.wait()
+            exit_status = self.process.wait()
         if self.aprocess is not None:
             await self.aprocess.communicate()
-            await self.aprocess.wait()
+            exit_status = await self.aprocess.wait()
         self.process = None
         self.aprocess = None
+        # None means the process had already been reaped by an earlier
+        # wait_for_exit(), which checked the status back then.
+        if exit_status is not None:
+            self.check_exit_status(exit_status)
+
+    def check_exit_status(self, exit_status):
+        """Asserts that PgBouncer shut down cleanly
+
+        Every shutdown in the test suite goes through an exit(0) path: SIGQUIT
+        (fast exit), as well as the second SIGTERM/SIGINT. So anything else
+        means PgBouncer crashed, or a sanitizer found a problem and turned it
+        into a failure (AddressSanitizer exits with status 1, or aborts when
+        abort_on_error=1 is set).
+
+        A crash during a test usually breaks the test anyway, but a failure at
+        exit has no other way of being noticed: the sanitizers report to
+        stderr, not to PgBouncer's logfile, so print_logs() never sees them.
+        They end up in the stderr that pytest captures for this test, which is
+        only shown when the test fails.
+
+        Windows is excluded: stop() has no SIGQUIT there and terminates the
+        process instead, which never exits with zero.
+        """
+        if WINDOWS:
+            return
+
+        if exit_status < 0:
+            reason = f"was killed by {signal.Signals(-exit_status).name}"
+        else:
+            reason = f"exited with status {exit_status}"
+        # Any sanitizer report is in the captured stderr of this test, not in
+        # the BOUNCER_LOG printed above.
+        assert exit_status == 0, f"PgBouncer {reason}"
 
     async def stop(self):
         if not WINDOWS:
@@ -1208,14 +1242,18 @@ class Bouncer(QueryRunner):
             assert not failed_valgrind
 
     async def cleanup(self):
+        # The port lock is released in its own finally, because both stop() and
+        # print_logs() can fail an otherwise passing test, and leaking the lock
+        # would take the port out of circulation for the rest of the run.
         try:
-            cleanup_test_leftovers(self)
-            await self.stop()
+            try:
+                cleanup_test_leftovers(self)
+                await self.stop()
+            finally:
+                self.print_logs()
         finally:
-            self.print_logs()
-
-        if self.port_lock:
-            self.port_lock.release()
+            if self.port_lock:
+                self.port_lock.release()
 
     def write_ini(self, config):
         """Writes a config to the ini file of this PgBouncer
