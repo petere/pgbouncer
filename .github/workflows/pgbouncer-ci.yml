@@ -159,18 +159,20 @@ jobs:
   # or when a PR carries the `ci-full` label.
   linux-extra:
     name: Linux extra (${{ matrix.name }})
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.ref == 'refs/heads/master' ||
-      contains(github.event.pull_request.labels.*.name, 'ci-full')
+#    if: >-
+#      github.event_name == 'workflow_dispatch' ||
+#      github.ref == 'refs/heads/master' ||
+#      contains(github.event.pull_request.labels.*.name, 'ci-full')
     runs-on: ${{ matrix.runner || 'ubuntu-22.04' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: plain
+          - name: asan
+            cflags: "-fsanitize=address"
           - name: ubsan
-            cflags: "-fno-sanitize-recover=all -fsanitize=undefined -fsanitize-address-use-after-scope -fno-sanitize=shift"
+            cflags: "-fno-sanitize-recover=all -fsanitize=undefined -fno-sanitize=shift"
           - name: scan-build
             scan_build: "yes"
           - name: arm
