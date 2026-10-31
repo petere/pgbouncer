@@ -1,0 +1,72 @@
+# CodeQL static analysis. Results are uploaded to GitHub code scanning and
+# show up under the Security tab and as annotations on pull requests.
+name: CodeQL
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: "0 7 * * 1" # Weekly, Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  LANG: C
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # C needs to observe a real compile, so it uses our own build.
+          - language: c-cpp
+            build-mode: manual
+          # Workflow files only; no build needed.
+          - language: actions
+            build-mode: none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        if: matrix.language == 'c-cpp'
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get -y --no-install-recommends install libc-ares-dev libevent-dev libldap-dev libpam0g-dev libssl-dev libsystemd-dev meson ninja-build pkg-config
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      # Enable every optional feature so that all of the C code gets compiled
+      # and therefore analyzed.
+      - name: Build
+        if: matrix.build-mode == 'manual'
+        env:
+          MESON_ARGS: -Dcassert=true -Dsystemd=enabled -Dcares=enabled -Dpam=enabled -Dldap=enabled -Dopenssl=enabled
+        run: sh ci/run.sh build meson
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: "/language:${{ matrix.language }}"
