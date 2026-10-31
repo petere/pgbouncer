@@ -19,6 +19,7 @@
 #include <usual/logging.h>
 
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include <usual/ctype.h>
 #include <usual/string.h>
@@ -191,7 +192,19 @@ void log_generic(enum LogLevel level, void *ctx, const char *fmt, ...)
 	format_time_ms(0, timebuf, sizeof(timebuf));
 
 	if (!log_file && cf_logfile && cf_logfile[0]) {
-		log_file = fopen(cf_logfile, "a");
+		/*
+		 * Don't use fopen(), so that a newly created file is not
+		 * readable by others regardless of umask.
+		 */
+		int fd = open(cf_logfile, O_WRONLY | O_APPEND | O_CREAT, 0600);
+		if (fd >= 0) {
+			log_file = fdopen(fd, "a");
+			if (!log_file) {
+				int save_errno = errno;
+				close(fd);
+				errno = save_errno;
+			}
+		}
 		if (log_file) {
 			/* Got the file, disable buffering */
 			setvbuf(log_file, NULL, _IONBF, 0);
