@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
 
       - name: OSPS Baseline scan
-        uses: revanite-io/osps-baseline-action@1af7ff8b44af83f120b20cc5f63b877286849257 # v1.5.2
+        uses: petere/osps-baseline-action@00dd37be8e14fb8f2a5b772328ee253e3e8e23bc
         with:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
